@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Inventory Item Schema",
+  "description": "Schema for validating inventory item structure",
+  "required": ["id", "name", "price", "image"],
+  "properties": {
+    "id": {
+      "type": "number",
+      "description": "Unique identifier for the inventory item",
+      "minimum": 1,
+      "maximum": 999999
+    },
+    "name": {
+      "type": "string",
+      "description": "Name of the inventory item",
+      "minLength": 1,
+      "maxLength": 255,
+      "pattern": "^[a-zA-Z0-9\\s\\-_]+$"
+    },
+    "price": {
+      "type": "number",
+      "description": "Price of the inventory item",
+      "minimum": 0.01,
+      "maximum": 999999.99,
+      "multipleOf": 0.01
+    },
+    "image": {
+      "type": "string",
+      "description": "Image URL or filename for the inventory item",
+      "minLength": 1,
+      "maxLength": 500,
+      "pattern": "^[a-zA-Z0-9\\s\\-_\\.\\/]+$"
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "id": 1,
+      "name": "Test Item",
+      "price": 29.99,
+      "image": "test-image.jpg"
+    },
+    {
+      "id": 2,
+      "name": "Another Item",
+      "price": 15.50,
+      "image": "another-image.png"
+    }
+  ]
+}
+

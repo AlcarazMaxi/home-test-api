@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- Exclude test classes from certain checks -->
+    <Match>
+        <Class name="~.*Test$"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+    
+    <!-- Exclude generated code -->
+    <Match>
+        <Class name="~.*\.generated\..*"/>
+    </Match>
+    
+    <!-- Exclude specific false positives -->
+    <Match>
+        <Class name="~.*Runner$"/>
+        <Bug pattern="UWF_UNWRITTEN_FIELD"/>
+    </Match>
+    
+    <!-- Exclude Karate framework classes -->
+    <Match>
+        <Class name="~.*karate.*"/>
+    </Match>
+    
+    <!-- Exclude Maven generated classes -->
+    <Match>
+        <Class name="~.*target.*"/>
+    </Match>
+</FindBugsFilter>

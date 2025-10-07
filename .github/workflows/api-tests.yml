@@ -1,0 +1,284 @@
+name: API Tests
+
+# Trigger workflow on push and pull requests
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+# Environment variables
+env:
+  JAVA_VERSION: '17'
+  MAVEN_VERSION: '3.9.5'
+
+jobs:
+  # Code quality check job
+  quality:
+    name: Code Quality Check
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          
+      - name: Setup Maven
+        uses: stCarolas/setup-maven@v4.1
+        with:
+          maven-version: ${{ env.MAVEN_VERSION }}
+          
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+          
+      - name: Run Checkstyle
+        run: mvn checkstyle:check
+        continue-on-error: true
+        
+      - name: Run SpotBugs
+        run: mvn spotbugs:check
+        continue-on-error: true
+        
+      - name: Generate site report
+        run: mvn site
+        continue-on-error: true
+        
+      - name: Upload quality reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quality-reports
+          path: target/site/
+          retention-days: 7
+
+  # Test execution job
+  test:
+    name: API Tests
+    runs-on: windows-latest
+    needs: quality
+    strategy:
+      matrix:
+        # Test different environments
+        environment: [dev, prod]
+        # Test different execution modes
+        execution: [sequential, parallel]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          
+      - name: Setup Maven
+        uses: stCarolas/setup-maven@v4.1
+        with:
+          maven-version: ${{ env.MAVEN_VERSION }}
+          
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+          
+      - name: Start Demo App
+        run: |
+          docker run -d -p 3100:3100 --name demo-app-${{ matrix.environment }}-${{ matrix.execution }} automaticbytes/demo-app
+          
+      - name: Wait for app to be ready
+        run: |
+          npx wait-on http://localhost:3100/api/inventory --timeout 30000
+          
+      - name: Run tests
+        run: |
+          if [ "${{ matrix.execution }}" = "parallel" ]; then
+            mvn test -Dkarate.env=${{ matrix.environment }} -Dkarate.options="--tags @smoke,@regression" -Dparallel=4
+          else
+            mvn test -Dkarate.env=${{ matrix.environment }} -Dkarate.options="--tags @smoke,@regression"
+          fi
+        env:
+          BASE_URL: http://localhost:3100/api
+          
+      - name: Generate test reports
+        run: mvn surefire-report:report
+        if: always()
+        
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.environment }}-${{ matrix.execution }}
+          path: |
+            target/surefire-reports/
+            target/karate-reports/
+          retention-days: 7
+
+  # Smoke tests job
+  smoke:
+    name: Smoke Tests
+    runs-on: windows-latest
+    needs: quality
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          
+      - name: Setup Maven
+        uses: stCarolas/setup-maven@v4.1
+        with:
+          maven-version: ${{ env.MAVEN_VERSION }}
+          
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+          
+      - name: Start Demo App
+        run: docker run -d -p 3100:3100 --name demo-app-smoke automaticbytes/demo-app
+        
+      - name: Wait for app to be ready
+        run: npx wait-on http://localhost:3100/api/inventory --timeout 30000
+        
+      - name: Run smoke tests
+        run: mvn test -Dkarate.env=dev -Dkarate.options="--tags @smoke"
+        env:
+          BASE_URL: http://localhost:3100/api
+          
+      - name: Upload smoke test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-test-results
+          path: target/surefire-reports/
+          retention-days: 7
+
+  # Performance testing job
+  performance:
+    name: Performance Tests
+    runs-on: windows-latest
+    needs: quality
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          
+      - name: Setup Maven
+        uses: stCarolas/setup-maven@v4.1
+        with:
+          maven-version: ${{ env.MAVEN_VERSION }}
+          
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+          
+      - name: Start Demo App
+        run: docker run -d -p 3100:3100 --name demo-app-perf automaticbytes/demo-app
+        
+      - name: Wait for app to be ready
+        run: npx wait-on http://localhost:3100/api/inventory --timeout 30000
+        
+      - name: Run performance tests
+        run: mvn test -Dkarate.env=perf -Dkarate.options="--tags @performance"
+        env:
+          BASE_URL: http://localhost:3100/api
+          
+      - name: Upload performance results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-results
+          path: target/surefire-reports/
+          retention-days: 7
+
+  # Security testing job
+  security:
+    name: Security Tests
+    runs-on: windows-latest
+    needs: quality
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Start Demo App
+        run: docker run -d -p 3100:3100 --name demo-app-security automaticbytes/demo-app
+        
+      - name: Wait for app to be ready
+        run: npx wait-on http://localhost:3100/api/inventory --timeout 30000
+        
+      - name: Run OWASP ZAP API scan
+        run: |
+          docker run -t owasp/zap2docker-stable zap-baseline.py -t http://localhost:3100/api -J zap-api-report.json
+        continue-on-error: true
+        
+      - name: Run API security tests
+        run: mvn test -Dkarate.env=dev -Dkarate.options="--tags @security"
+        env:
+          BASE_URL: http://localhost:3100/api
+        continue-on-error: true
+        
+      - name: Upload security results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-results
+          path: |
+            zap-api-report.json
+            target/surefire-reports/
+          retention-days: 7
+
+  # Test summary job
+  summary:
+    name: Test Summary
+    runs-on: windows-latest
+    needs: [test, smoke, performance, security]
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+          
+      - name: Generate test summary
+        run: |
+          echo "# API Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "- API Tests: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Smoke Tests: ${{ needs.smoke.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Performance Tests: ${{ needs.performance.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Security Tests: ${{ needs.security.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Artifacts Generated" >> $GITHUB_STEP_SUMMARY
+          echo "- Test Reports" >> $GITHUB_STEP_SUMMARY
+          echo "- Performance Metrics" >> $GITHUB_STEP_SUMMARY
+          echo "- Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Code Quality Reports" >> $GITHUB_STEP_SUMMARY

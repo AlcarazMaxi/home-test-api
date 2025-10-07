@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    
+    <!-- Project metadata -->
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.automation</groupId>
+    <artifactId>api-tests</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+    
+    <!-- Project information -->
+    <name>API Tests</name>
+    <description>API automation tests using Karate and Maven</description>
+    
+    <!-- Properties for configuration -->
+    <properties>
+        <!-- Java version -->
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        
+        <!-- Karate version -->
+        <karate.version>1.4.1</karate.version>
+        
+        <!-- JUnit version -->
+        <junit.version>5.9.3</junit.version>
+        
+        <!-- Maven Surefire version -->
+        <surefire.version>3.1.2</surefire.version>
+        
+        <!-- Maven Compiler version -->
+        <compiler.version>3.11.0</compiler.version>
+        
+        <!-- Maven Surefire Report version -->
+        <surefire.report.version>3.1.2</surefire.report.version>
+    </properties>
+    
+    <!-- Dependencies -->
+    <dependencies>
+        <!-- Karate JUnit5 integration -->
+        <dependency>
+            <groupId>com.intuit.karate</groupId>
+            <artifactId>karate-junit5</artifactId>
+            <version>${karate.version}</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <!-- Karate core -->
+        <dependency>
+            <groupId>com.intuit.karate</groupId>
+            <artifactId>karate-core</artifactId>
+            <version>${karate.version}</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <!-- JUnit5 API -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <!-- JUnit5 Engine -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <!-- JUnit5 Params for parameterized tests -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <!-- Jackson for JSON processing -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.15.2</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <!-- Apache Commons Lang for utilities -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.12.0</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    
+    <!-- Build configuration -->
+    <build>
+        <!-- Source directories -->
+        <sourceDirectory>src/main/java</sourceDirectory>
+        <testSourceDirectory>src/test/java</testSourceDirectory>
+        
+        <!-- Plugins -->
+        <plugins>
+            <!-- Maven Compiler Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${compiler.version}</version>
+                <configuration>
+                    <source>17</source>
+                    <target>17</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+            
+            <!-- Maven Surefire Plugin for running tests -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire.version}</version>
+                <configuration>
+                    <!-- Test execution configuration -->
+                    <includes>
+                        <include>**/*Test.java</include>
+                        <include>**/*Runner.java</include>
+                    </includes>
+                    
+                    <!-- Parallel execution -->
+                    <parallel>methods</parallel>
+                    <threadCount>4</threadCount>
+                    
+                    <!-- System properties -->
+                    <systemPropertyVariables>
+                        <karate.env>${karate.env}</karate.env>
+                        <karate.options>${karate.options}</karate.options>
+                    </systemPropertyVariables>
+                    
+                    <!-- Test output directory -->
+                    <reportsDirectory>target/surefire-reports</reportsDirectory>
+                    
+                    <!-- JUnit5 configuration -->
+                    <properties>
+                        <property>
+                            <name>junit.jupiter.execution.parallel.enabled</name>
+                            <value>true</value>
+                        </property>
+                        <property>
+                            <name>junit.jupiter.execution.parallel.mode.default</name>
+                            <value>concurrent</value>
+                        </property>
+                    </properties>
+                </configuration>
+            </plugin>
+            
+            <!-- Maven Surefire Report Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-report-plugin</artifactId>
+                <version>${surefire.report.version}</version>
+                <executions>
+                    <execution>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            
+            <!-- Maven Resources Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <configuration>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+    
+    <!-- Profiles for different environments -->
+    <profiles>
+        <!-- Development profile -->
+        <profile>
+            <id>dev</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <karate.env>dev</karate.env>
+                <karate.options>--tags @smoke</karate.options>
+            </properties>
+        </profile>
+        
+        <!-- Production profile -->
+        <profile>
+            <id>prod</id>
+            <properties>
+                <karate.env>prod</karate.env>
+                <karate.options>--tags @regression</karate.options>
+            </properties>
+        </profile>
+        
+        <!-- Performance profile -->
+        <profile>
+            <id>perf</id>
+            <properties>
+                <karate.env>perf</karate.env>
+                <karate.options>--tags @performance</karate.options>
+            </properties>
+        </profile>
+        
+        <!-- All tests profile -->
+        <profile>
+            <id>all</id>
+            <properties>
+                <karate.env>all</karate.env>
+                <karate.options>--tags @smoke,@regression</karate.options>
+            </properties>
+        </profile>
+    </profiles>
+    
+    <!-- Reporting configuration -->
+    <reporting>
+        <plugins>
+            <!-- Maven Surefire Report Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-report-plugin</artifactId>
+                <version>${surefire.report.version}</version>
+            </plugin>
+        </plugins>
+    </reporting>
+</project>
+

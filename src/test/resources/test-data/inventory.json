@@ -1,0 +1,92 @@
+{
+  "testItems": {
+    "validItem": {
+      "id": 999,
+      "name": "Test Item",
+      "price": 29.99,
+      "image": "test-image.jpg"
+    },
+    "invalidItem": {
+      "id": "invalid",
+      "name": "",
+      "price": -10.99,
+      "image": ""
+    },
+    "duplicateItem": {
+      "id": 1,
+      "name": "Duplicate Item",
+      "price": 15.50,
+      "image": "duplicate-image.jpg"
+    },
+    "specialCharItem": {
+      "id": 998,
+      "name": "Test@#$%^&*()Item",
+      "price": 25.00,
+      "image": "special-image.png"
+    },
+    "longNameItem": {
+      "id": 997,
+      "name": "a".repeat(1000),
+      "price": 35.99,
+      "image": "long-name-image.jpg"
+    },
+    "zeroPriceItem": {
+      "id": 996,
+      "name": "Zero Price Item",
+      "price": 0,
+      "image": "zero-price-image.jpg"
+    },
+    "negativePriceItem": {
+      "id": 995,
+      "name": "Negative Price Item",
+      "price": -5.99,
+      "image": "negative-price-image.jpg"
+    }
+  },
+  "filters": {
+    "validId": 3,
+    "invalidId": "invalid",
+    "negativeId": -1,
+    "zeroId": 0,
+    "nonExistentId": 99999
+  },
+  "expectedResponses": {
+    "success": {
+      "status": 200,
+      "message": "Success"
+    },
+    "error": {
+      "status": 400,
+      "message": "Not all requirements are met"
+    }
+  },
+  "requiredFields": ["id", "name", "price", "image"],
+  "fieldTypes": {
+    "id": "number",
+    "name": "string",
+    "price": "number",
+    "image": "string"
+  },
+  "validationRules": {
+    "id": {
+      "type": "number",
+      "min": 1,
+      "max": 999999
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "price": {
+      "type": "number",
+      "min": 0.01,
+      "max": 999999.99
+    },
+    "image": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    }
+  }
+}
