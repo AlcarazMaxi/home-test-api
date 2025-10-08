@@ -105,7 +105,7 @@ jobs:
         # Wait for application to be ready with retry logic
         echo "Waiting for mock server to start..."
         for i in {1..30}; do
-          if curl -f http://localhost:3100/api > /dev/null 2>&1; then
+          if curl -f http://localhost:3100 > /dev/null 2>&1; then
             echo "Mock server is ready!"
             break
           fi
@@ -113,8 +113,10 @@ jobs:
           sleep 2
         done
         
-        # Final verification
-        curl -f http://localhost:3100/api || (echo "Mock server failed to start" && exit 1)
+        # Final verification - check root endpoint first
+        curl -f http://localhost:3100 || (echo "Mock server failed to start" && exit 1)
+        # Then check API endpoint
+        curl -f http://localhost:3100/api || (echo "API endpoint not available" && exit 1)
         
     # Run API tests
     - name: Run API tests
