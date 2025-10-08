@@ -91,10 +91,18 @@ jobs:
     # Start demo application container
     - name: Start demo application
       run: |
-        # Pull the demo app image (let Docker choose the best platform)
-        docker pull automaticbytes/demo-app:latest
-        # Start the container in detached mode
-        docker run -d --name demo-app -p 3100:3100 automaticbytes/demo-app:latest
+        # Try to pull and run the demo app with different approaches
+        echo "Attempting to start demo application..."
+        
+        # First attempt: Try with platform emulation
+        if docker run --rm --platform linux/amd64 automaticbytes/demo-app:latest echo "Image accessible" 2>/dev/null; then
+          echo "Image is accessible, starting container..."
+          docker run -d --name demo-app --platform linux/amd64 -p 3100:3100 automaticbytes/demo-app:latest
+        else
+          echo "Platform emulation failed, trying without platform specification..."
+          docker run -d --name demo-app -p 3100:3100 automaticbytes/demo-app:latest
+        fi
+        
         # Wait for application to be ready with retry logic
         echo "Waiting for demo app to start..."
         for i in {1..30}; do
@@ -105,6 +113,14 @@ jobs:
           echo "Attempt $i/30: Demo app not ready yet, waiting..."
           sleep 2
         done
+        
+        # Check if container is running
+        if ! docker ps | grep -q demo-app; then
+          echo "Container failed to start, checking logs..."
+          docker logs demo-app || echo "No logs available"
+          exit 1
+        fi
+        
         # Final verification
         curl -f http://localhost:3100/api || (echo "Demo app failed to start" && docker logs demo-app && exit 1)
         
