@@ -279,7 +279,7 @@ public class TestUtils {
      * @return Unique identifier string
      */
     public static String generateUniqueId() {
-        return "test_" + sessionId + "_" + idCounter.getAndIncrement() + "_" + Thread.currentThread().threadId();
+        return "test_" + sessionId + "_" + idCounter.getAndIncrement() + "_" + Thread.currentThread().getId();
     }
     
     /**
@@ -288,7 +288,7 @@ public class TestUtils {
      * @return Unique identifier string
      */
     public static String generateUniqueId(String prefix) {
-        return prefix + "_" + sessionId + "_" + idCounter.getAndIncrement() + "_" + Thread.currentThread().threadId();
+        return prefix + "_" + sessionId + "_" + idCounter.getAndIncrement() + "_" + Thread.currentThread().getId();
     }
     
     /**
