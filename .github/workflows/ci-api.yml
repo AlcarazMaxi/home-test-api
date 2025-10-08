@@ -91,10 +91,10 @@ jobs:
     # Start demo application container
     - name: Start demo application
       run: |
-        # Pull the demo app image with platform specification
-        docker pull --platform linux/amd64 automaticbytes/demo-app:latest
-        # Start the container in detached mode with platform specification
-        docker run -d --name demo-app --platform linux/amd64 -p 3100:3100 automaticbytes/demo-app:latest
+        # Pull the demo app image (let Docker choose the best platform)
+        docker pull automaticbytes/demo-app:latest
+        # Start the container in detached mode
+        docker run -d --name demo-app -p 3100:3100 automaticbytes/demo-app:latest
         # Wait for application to be ready with retry logic
         echo "Waiting for demo app to start..."
         for i in {1..30}; do
