@@ -1,6 +1,6 @@
 # API Automation Tests — Karate + Java 17 + Maven
 
-[![API Tests](https://github.com/AlcarazMaxi/api-tests/workflows/API%20Tests/badge.svg)](https://github.com/AlcarazMaxi/api-tests/actions)
+[![API Tests](https://github.com/AlcarazMaxi/home-test-api/workflows/API%20Tests/badge.svg)](https://github.com/AlcarazMaxi/home-test-api/actions)
 
 ## Overview
 

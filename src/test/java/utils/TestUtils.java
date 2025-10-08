@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.UUID;
 
 /**
  * Utility class for test automation
@@ -14,6 +16,12 @@ import java.util.Random;
 public class TestUtils {
     
     private static final Random random = new Random();
+    
+    // Atomic counter for generating unique IDs across threads
+    private static final AtomicLong idCounter = new AtomicLong(System.currentTimeMillis());
+    
+    // Test session identifier for grouping related test data
+    private static final String sessionId = UUID.randomUUID().toString().substring(0, 8);
     
     /**
      * Generate random test data
@@ -267,10 +275,95 @@ public class TestUtils {
     }
     
     /**
-     * Generate unique identifier
+     * Generate unique identifier with thread safety
      * @return Unique identifier string
      */
     public static String generateUniqueId() {
-        return "test_" + System.currentTimeMillis() + "_" + random.nextInt(1000);
+        return "test_" + sessionId + "_" + idCounter.getAndIncrement() + "_" + Thread.currentThread().threadId();
+    }
+    
+    /**
+     * Generate unique identifier for test isolation
+     * @param prefix - Prefix for the identifier
+     * @return Unique identifier string
+     */
+    public static String generateUniqueId(String prefix) {
+        return prefix + "_" + sessionId + "_" + idCounter.getAndIncrement() + "_" + Thread.currentThread().threadId();
+    }
+    
+    /**
+     * Generate test item with unique ID for test isolation
+     * @return Map containing test item data with unique ID
+     */
+    public static Map<String, Object> generateUniqueTestItem() {
+        Map<String, Object> item = new HashMap<>();
+        item.put("id", generateUniqueId("item"));
+        item.put("name", "Test Item " + System.currentTimeMillis());
+        item.put("price", 29.99);
+        item.put("image", "test-image-" + System.currentTimeMillis() + ".jpg");
+        item.put("sessionId", sessionId);
+        return item;
+    }
+    
+    /**
+     * Generate test item with specific data for test isolation
+     * @param name - Item name
+     * @param price - Item price
+     * @return Map containing test item data with unique ID
+     */
+    public static Map<String, Object> generateUniqueTestItem(String name, double price) {
+        Map<String, Object> item = new HashMap<>();
+        item.put("id", generateUniqueId("item"));
+        item.put("name", name + "_" + System.currentTimeMillis());
+        item.put("price", price);
+        item.put("image", "test-image-" + System.currentTimeMillis() + ".jpg");
+        item.put("sessionId", sessionId);
+        return item;
+    }
+    
+    /**
+     * Generate multiple unique test items for batch testing
+     * @param count - Number of items to generate
+     * @return List of unique test items
+     */
+    public static List<Map<String, Object>> generateUniqueTestItems(int count) {
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            items.add(generateUniqueTestItem("BatchItem" + i, 10.0 + i));
+        }
+        return items;
+    }
+    
+    /**
+     * Get current session ID for test grouping
+     * @return Session ID string
+     */
+    public static String getSessionId() {
+        return sessionId;
+    }
+    
+    /**
+     * Generate unique email for test isolation
+     * @return Unique email string
+     */
+    public static String generateUniqueEmail() {
+        return "test_" + sessionId + "_" + idCounter.getAndIncrement() + "@example.com";
+    }
+    
+    /**
+     * Generate unique username for test isolation
+     * @return Unique username string
+     */
+    public static String generateUniqueUsername() {
+        return "user_" + sessionId + "_" + idCounter.getAndIncrement();
+    }
+    
+    /**
+     * Clean up test data by session ID
+     * This method can be used to identify and clean up test data
+     * @return Session ID for cleanup
+     */
+    public static String getCleanupSessionId() {
+        return sessionId;
     }
 }
