@@ -88,41 +88,33 @@ jobs:
         # Restore keys for fallback
         restore-keys: ${{ runner.os }}-m2-
         
-    # Start demo application container
-    - name: Start demo application
+    # Start mock demo application
+    - name: Start mock demo application
       run: |
-        # Try to pull and run the demo app with different approaches
-        echo "Attempting to start demo application..."
-        
-        # First attempt: Try with platform emulation
-        if docker run --rm --platform linux/amd64 automaticbytes/demo-app:latest echo "Image accessible" 2>/dev/null; then
-          echo "Image is accessible, starting container..."
-          docker run -d --name demo-app --platform linux/amd64 -p 3100:3100 automaticbytes/demo-app:latest
-        else
-          echo "Platform emulation failed, trying without platform specification..."
-          docker run -d --name demo-app -p 3100:3100 automaticbytes/demo-app:latest
-        fi
+        echo "Starting mock demo application..."
+        # Install Node.js and dependencies for mock server
+        curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+        # Install mock server dependencies
+        npm install express cors
+        # Start the mock server in the background
+        node mock-server.js &
+        # Store the process ID
+        echo $! > mock-server.pid
         
         # Wait for application to be ready with retry logic
-        echo "Waiting for demo app to start..."
+        echo "Waiting for mock server to start..."
         for i in {1..30}; do
           if curl -f http://localhost:3100/api > /dev/null 2>&1; then
-            echo "Demo app is ready!"
+            echo "Mock server is ready!"
             break
           fi
-          echo "Attempt $i/30: Demo app not ready yet, waiting..."
+          echo "Attempt $i/30: Mock server not ready yet, waiting..."
           sleep 2
         done
         
-        # Check if container is running
-        if ! docker ps | grep -q demo-app; then
-          echo "Container failed to start, checking logs..."
-          docker logs demo-app || echo "No logs available"
-          exit 1
-        fi
-        
         # Final verification
-        curl -f http://localhost:3100/api || (echo "Demo app failed to start" && docker logs demo-app && exit 1)
+        curl -f http://localhost:3100/api || (echo "Mock server failed to start" && exit 1)
         
     # Run API tests
     - name: Run API tests
@@ -164,13 +156,17 @@ jobs:
         # Retention period for artifacts
         retention-days: 30
         
-    # Cleanup demo application
-    - name: Cleanup demo application
+    # Cleanup mock application
+    - name: Cleanup mock application
       if: always()
       run: |
-        # Stop and remove the demo app container
-        docker stop demo-app || true
-        docker rm demo-app || true
+        # Stop the mock server
+        if [ -f mock-server.pid ]; then
+          kill $(cat mock-server.pid) || true
+          rm -f mock-server.pid
+        fi
+        # Kill any remaining node processes
+        pkill -f mock-server.js || true
 
   # Code quality job
   quality:
@@ -265,11 +261,16 @@ jobs:
         path: target/karate-reports/
         retention-days: 30
         
-    - name: Cleanup demo application
+    - name: Cleanup mock application
       if: always()
       run: |
-        docker stop demo-app || true
-        docker rm demo-app || true
+        # Stop the mock server
+        if [ -f mock-server.pid ]; then
+          kill $(cat mock-server.pid) || true
+          rm -f mock-server.pid
+        fi
+        # Kill any remaining node processes
+        pkill -f mock-server.js || true
 
   # Security testing job (optional, triggered manually)
   security:
@@ -317,8 +318,13 @@ jobs:
         path: target/karate-reports/
         retention-days: 30
         
-    - name: Cleanup demo application
+    - name: Cleanup mock application
       if: always()
       run: |
-        docker stop demo-app || true
-        docker rm demo-app || true
+        # Stop the mock server
+        if [ -f mock-server.pid ]; then
+          kill $(cat mock-server.pid) || true
+          rm -f mock-server.pid
+        fi
+        # Kill any remaining node processes
+        pkill -f mock-server.js || true
