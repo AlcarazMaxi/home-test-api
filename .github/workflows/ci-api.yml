@@ -92,15 +92,34 @@ jobs:
     - name: Start mock demo application
       run: |
         echo "Starting mock demo application..."
+        
         # Install Node.js and dependencies for mock server
+        echo "Installing Node.js..."
         curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
         sudo apt-get install -y nodejs
+        
+        # Verify Node.js installation
+        node --version
+        npm --version
+        
         # Install mock server dependencies
+        echo "Installing mock server dependencies..."
         npm install express cors
+        
+        # Verify mock server file exists
+        if [ ! -f mock-server.js ]; then
+          echo "Error: mock-server.js not found!"
+          exit 1
+        fi
+        
         # Start the mock server in the background
+        echo "Starting mock server..."
         node mock-server.js &
         # Store the process ID
         echo $! > mock-server.pid
+        
+        # Give the server a moment to start
+        sleep 3
         
         # Wait for application to be ready with retry logic
         echo "Waiting for mock server to start..."
