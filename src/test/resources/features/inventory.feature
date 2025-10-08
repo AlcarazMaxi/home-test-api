@@ -214,4 +214,3 @@ Feature: Enhanced Inventory API Tests
     And print 'Items with session ID:', sessionItems.length
     # Note: Actual cleanup would be implemented in a separate cleanup feature
     And print 'Cleanup session ID for manual verification:', sessionId
-
