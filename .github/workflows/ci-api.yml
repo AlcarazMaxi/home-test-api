@@ -134,8 +134,8 @@ jobs:
         
         # Final verification - check root endpoint first
         curl -f http://localhost:3100 || (echo "Mock server failed to start" && exit 1)
-        # Then check API endpoint
-        curl -f http://localhost:3100/api || (echo "API endpoint not available" && exit 1)
+        # Then check API endpoint (use actual endpoint)
+        curl -f http://localhost:3100/api/inventory || (echo "API endpoint not available" && exit 1)
         
     # Run API tests
     - name: Run API tests
@@ -268,7 +268,7 @@ jobs:
         docker pull automaticbytes/demo-app:latest
         docker run -d --name demo-app -p 3100:3100 automaticbytes/demo-app:latest
         sleep 10
-        curl -f http://localhost:3100/api || exit 1
+        curl -f http://localhost:3100/api/inventory || exit 1
         
     - name: Run performance tests
       run: |
@@ -325,7 +325,7 @@ jobs:
         docker pull automaticbytes/demo-app:latest
         docker run -d --name demo-app -p 3100:3100 automaticbytes/demo-app:latest
         sleep 10
-        curl -f http://localhost:3100/api || exit 1
+        curl -f http://localhost:3100/api/inventory || exit 1
         
     - name: Run security tests
       run: |
