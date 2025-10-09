@@ -70,7 +70,7 @@ jobs:
           # Start the real demo application with enhanced configuration
           echo "Starting demo app with platform compatibility and network isolation..."
           docker run -d -p 3100:3100 --name demo-app \
-            --platform linux/amd64 \
+            --platform linux/arm64 \
             --network test-network \
             --health-cmd="curl -f http://localhost:3100/api || exit 1" \
             --health-interval=5s \
