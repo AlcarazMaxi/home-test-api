@@ -1,0 +1,12 @@
+{
+  "name": "production-demo-app",
+  "version": "1.0.0",
+  "description": "Production-compatible demo app for API tests",
+  "main": "production-demo-app.js",
+  "scripts": {
+    "start": "node production-demo-app.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

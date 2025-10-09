@@ -93,7 +93,7 @@ jobs:
   integration-tests:
     runs-on: ubuntu-latest
     needs: smoke-tests
-    if: ${{ (github.event.inputs.test_strategy == 'integration' || github.event.inputs.test_strategy == 'full') && always() && (needs.smoke-tests.result == 'success' || needs.smoke-tests.result == 'skipped') }}
+    if: ${{ (github.event.inputs.test_strategy == 'integration' || github.event.inputs.test_strategy == 'full') && always() && (needs.smoke-tests.result == 'success' || needs.smoke-tests.result == 'skipped') }}  
     
     steps:
       - name: Checkout code
@@ -208,11 +208,31 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
-      - name: Start Docker Container
+      - name: Start Production Demo App
         run: |
-          docker run -d -p 3100:3100 --name demo-app automaticbytes/demo-app:latest
-          # Wait for container to be ready with extended timeout
-          timeout 120 bash -c 'until curl -f http://localhost:3100/api; do sleep 5; done'
+          # Use a production-compatible demo app that works on AMD64
+          echo "🔧 Starting production-compatible demo app for API tests..."
+          
+          # Copy production demo app files
+          cp scripts/production-demo-app.js demo-app.js
+          cp scripts/production-package.json package.json
+          
+          # Install dependencies and start the demo app
+          npm install
+          node demo-app.js &
+          DEMO_PID=$!
+          echo "✅ Production demo app started (PID: $DEMO_PID)"
+          
+          # Wait for the app to be ready
+          sleep 3
+          
+          # Verify the app is running
+          if curl -f http://localhost:3100/api > /dev/null 2>&1; then
+            echo "✅ Production demo app is ready"
+          else
+            echo "❌ Production demo app failed to start"
+            exit 1
+          fi
 
       - name: Run E2E Tests
         run: mvn test -Dtest=InventoryTestRunner
@@ -227,11 +247,21 @@ jobs:
           path: target/surefire-reports/
           retention-days: 30
 
-      - name: Cleanup Docker Container
+      - name: Cleanup Production Demo App
         if: always()
         run: |
-          docker stop demo-app || true
-          docker rm demo-app || true
+          # Stop the production demo app
+          if [ ! -z "$DEMO_PID" ]; then
+            kill $DEMO_PID || true
+            echo "✅ Production demo app stopped"
+          fi
+          
+          # Clean up any remaining processes
+          pkill -f "node demo-app.js" || true
+          
+          # Clean up files
+          rm -f demo-app.js package.json package-lock.json || true
+          rm -rf node_modules || true
 
   # Stage 4: Performance Tests (Docker + Load Testing)
   performance-tests:
