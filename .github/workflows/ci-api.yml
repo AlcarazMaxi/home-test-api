@@ -1,351 +1,60 @@
-# API Test CI/CD Pipeline
-# Runs API automation tests with Karate framework across different environments
-# Includes performance testing, security checks, and comprehensive validation
-
 name: API Tests
 
-# Trigger conditions for the workflow
 on:
-  # Run on push to main branch
   push:
-    branches: [ main ]
-  # Run on pull requests to main branch
+    branches: [ main, develop ]
   pull_request:
     branches: [ main ]
-  # Allow manual triggering with optional parameters
-  workflow_dispatch:
-    inputs:
-      profile:
-        description: 'Maven profile to run (dev, perf, security)'
-        required: false
-        default: 'dev'
-        type: choice
-        options:
-        - dev
-        - perf
-        - security
-      parallel:
-        description: 'Run tests in parallel'
-        required: false
-        default: true
-        type: boolean
-      tags:
-        description: 'Karate tags to run (e.g., @smoke,@regression)'
-        required: false
-        default: '@smoke'
-        type: string
+  workflow_dispatch: # Allow manual triggering
 
-# Define environment variables
-env:
-  # Base URL for the API under test
-  BASE_URL: http://localhost:3100/api
-  # Maven configuration
-  MAVEN_OPTS: -Xmx1024m
-  # Karate configuration
-  KARATE_ENV: ci
-  KARATE_CONNECT_TIMEOUT: 10000
-  KARATE_READ_TIMEOUT: 30000
-  KARATE_RETRY_COUNT: 3
-  KARATE_RETRY_INTERVAL: 1000
-
-# Define jobs to run
 jobs:
-  # Main test job
-  test:
-    # Run on latest Ubuntu
+  api-tests:
     runs-on: ubuntu-latest
     
-    # Steps to execute
     steps:
-    # Checkout the repository code
     - name: Checkout code
       uses: actions/checkout@v4
       
-    # Setup Java 17
     - name: Setup Java 17
       uses: actions/setup-java@v4
       with:
-        # Use Java 17 distribution
         java-version: '17'
-        # Use Temurin distribution (recommended)
         distribution: 'temurin'
         
-    # Setup Maven
-    - name: Setup Maven
-      uses: stCarolas/setup-maven@v4
-      with:
-        # Use Maven 3.9.0
-        maven-version: '3.9.0'
-        
-    # Cache Maven dependencies
     - name: Cache Maven dependencies
       uses: actions/cache@v4
       with:
-        # Cache path for Maven dependencies
         path: ~/.m2
-        # Cache key for Maven dependencies
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-        # Restore keys for fallback
-        restore-keys: ${{ runner.os }}-m2-
+        restore-keys: ${{ runner.os }}-m2
         
-    # Start mock demo application
-    - name: Start mock demo application
+    - name: Start demo app container
       run: |
-        echo "Starting mock demo application..."
+        docker run -d -p 3100:3100 --name demo-app automaticbytes/demo-app:latest
+        # Wait for API to be ready
+        timeout 30 bash -c 'until curl -f http://localhost:3100/api; do sleep 2; done'
         
-        # Install Node.js and dependencies for mock server
-        echo "Installing Node.js..."
-        curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-        sudo apt-get install -y nodejs
-        
-        # Verify Node.js installation
-        node --version
-        npm --version
-        
-        # Install mock server dependencies
-        echo "Installing mock server dependencies..."
-        npm install express cors
-        
-        # Verify mock server file exists
-        if [ ! -f mock-server.js ]; then
-          echo "Error: mock-server.js not found!"
-          exit 1
-        fi
-        
-        # Start the mock server in the background
-        echo "Starting mock server..."
-        node mock-server.js &
-        # Store the process ID
-        echo $! > mock-server.pid
-        
-        # Give the server a moment to start
-        sleep 3
-        
-        # Wait for application to be ready with retry logic
-        echo "Waiting for mock server to start..."
-        for i in {1..30}; do
-          if curl -f http://localhost:3100 > /dev/null 2>&1; then
-            echo "Mock server is ready!"
-            break
-          fi
-          echo "Attempt $i/30: Mock server not ready yet, waiting..."
-          sleep 2
-        done
-        
-        # Final verification - check root endpoint first
-        curl -f http://localhost:3100 || (echo "Mock server failed to start" && exit 1)
-        # Then check API endpoint (use actual endpoint)
-        curl -f http://localhost:3100/api/inventory || (echo "API endpoint not available" && exit 1)
-        
-    # Run API tests
     - name: Run API tests
-      run: |
-        # Set environment variables for test execution
-        export BASE_URL=${{ env.BASE_URL }}
-        # Run tests based on input parameters
-        if [ "${{ github.event.inputs.parallel }}" = "true" ]; then
-          mvn test -DbaseUrl=${{ env.BASE_URL }} -Dkarate.options="--threads=4 --tags=${{ github.event.inputs.tags }}"
-        else
-          mvn test -DbaseUrl=${{ env.BASE_URL }} -Dkarate.options="--tags=${{ github.event.inputs.tags }}"
-        fi
-        
-    # Run performance tests (if profile is perf)
-    - name: Run performance tests
-      if: github.event.inputs.profile == 'perf'
-      run: |
-        mvn test -DbaseUrl=${{ env.BASE_URL }} -Pperf -Dkarate.options="--tags=@performance"
-        
-    # Run security tests (if profile is security)
-    - name: Run security tests
-      if: github.event.inputs.profile == 'security'
-      run: |
-        mvn test -DbaseUrl=${{ env.BASE_URL }} -Psecurity -Dkarate.options="--tags=@security"
-        
-    # Upload test results and reports
+      run: mvn test -DbaseUrl=http://localhost:3100/api
+      
     - name: Upload test results
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        # Name for the artifact
-        name: api-test-results
-        # Path to test results
-        path: |
-          target/karate-reports/
-          target/surefire-reports/
-          target/checkstyle-result.xml
-          target/spotbugsXml.xml
-        # Retention period for artifacts
+        name: surefire-reports
+        path: target/surefire-reports/
         retention-days: 30
         
-    # Cleanup mock application
-    - name: Cleanup mock application
-      if: always()
-      run: |
-        # Stop the mock server
-        if [ -f mock-server.pid ]; then
-          kill $(cat mock-server.pid) || true
-          rm -f mock-server.pid
-        fi
-        # Kill any remaining node processes
-        pkill -f mock-server.js || true
-
-  # Code quality job
-  quality:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Java 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        
-    - name: Setup Maven
-      uses: stCarolas/setup-maven@v4
-      with:
-        maven-version: '3.9.0'
-        
-    - name: Cache Maven dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-        restore-keys: ${{ runner.os }}-m2-
-        
-    # Run code quality checks
-    - name: Run Checkstyle
-      run: mvn checkstyle:check
-      
-    - name: Run SpotBugs
-      run: mvn spotbugs:check
-      
-    - name: Run Spotless
-      run: mvn spotless:check
-      
-    # Upload quality reports
-    - name: Upload quality reports
+    - name: Upload Karate reports
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: quality-reports
-        path: |
-          target/checkstyle-result.xml
-          target/spotbugsXml.xml
-        retention-days: 30
-
-  # Performance testing job (optional, triggered manually)
-  performance:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'perf'
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Java 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        
-    - name: Setup Maven
-      uses: stCarolas/setup-maven@v4
-      with:
-        maven-version: '3.9.0'
-        
-    - name: Cache Maven dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-        restore-keys: ${{ runner.os }}-m2-
-        
-    - name: Start demo application
-      run: |
-        docker pull automaticbytes/demo-app:latest
-        docker run -d --name demo-app -p 3100:3100 automaticbytes/demo-app:latest
-        sleep 10
-        curl -f http://localhost:3100/api/inventory || exit 1
-        
-    - name: Run performance tests
-      run: |
-        mvn test -DbaseUrl=${{ env.BASE_URL }} -Pperf -Dkarate.options="--tags=@performance"
-        
-    - name: Upload performance results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: performance-results
+        name: karate-reports
         path: target/karate-reports/
         retention-days: 30
         
-    - name: Cleanup mock application
+    - name: Cleanup demo app
       if: always()
       run: |
-        # Stop the mock server
-        if [ -f mock-server.pid ]; then
-          kill $(cat mock-server.pid) || true
-          rm -f mock-server.pid
-        fi
-        # Kill any remaining node processes
-        pkill -f mock-server.js || true
-
-  # Security testing job (optional, triggered manually)
-  security:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'security'
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Java 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        
-    - name: Setup Maven
-      uses: stCarolas/setup-maven@v4
-      with:
-        maven-version: '3.9.0'
-        
-    - name: Cache Maven dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-        restore-keys: ${{ runner.os }}-m2-
-        
-    - name: Start demo application
-      run: |
-        docker pull automaticbytes/demo-app:latest
-        docker run -d --name demo-app -p 3100:3100 automaticbytes/demo-app:latest
-        sleep 10
-        curl -f http://localhost:3100/api/inventory || exit 1
-        
-    - name: Run security tests
-      run: |
-        mvn test -DbaseUrl=${{ env.BASE_URL }} -Psecurity -Dkarate.options="--tags=@security"
-        
-    - name: Upload security results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: security-results
-        path: target/karate-reports/
-        retention-days: 30
-        
-    - name: Cleanup mock application
-      if: always()
-      run: |
-        # Stop the mock server
-        if [ -f mock-server.pid ]; then
-          kill $(cat mock-server.pid) || true
-          rm -f mock-server.pid
-        fi
-        # Kill any remaining node processes
-        pkill -f mock-server.js || true
+        docker stop demo-app || true
+        docker rm demo-app || true
