@@ -35,7 +35,7 @@ jobs:
         timeout 30 bash -c 'until curl -f http://localhost:3100/api; do sleep 2; done'
         
     - name: Run API tests
-      run: mvn test -DbaseUrl=http://localhost:3100/api
+      run: mvn test -Dtest=InventoryTestRunner
       
     - name: Upload test results
       uses: actions/upload-artifact@v4

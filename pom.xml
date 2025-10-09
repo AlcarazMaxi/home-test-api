@@ -124,9 +124,9 @@
                 <version>${surefire.version}</version>
                 <configuration>
                     <!-- Test execution configuration -->
-                    <includes>
-                        <include>**/SimpleJavaTest.java</include>
-                    </includes>
+               <includes>
+                   <include>**/InventoryTestRunner.java</include>
+               </includes>
                     
                     <!-- Single thread execution to avoid timeout -->
                     <parallel>none</parallel>
