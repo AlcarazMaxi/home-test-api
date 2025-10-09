@@ -1,0 +1,104 @@
+# Environment Configuration for Hybrid Testing Strategy
+# Demonstrates enterprise-level environment management
+
+environments:
+  # Development Environment (Mock Server)
+  development:
+    base_url: "http://localhost:3100/api"
+    server_type: "mock"
+    timeout: 5000
+    retries: 1
+    features:
+      - smoke_tests
+      - unit_tests
+      - fast_feedback
+    
+  # Integration Environment (Docker with Fallback)
+  integration:
+    base_url: "http://localhost:3100/api"
+    server_type: "docker_with_fallback"
+    timeout: 30000
+    retries: 3
+    features:
+      - integration_tests
+      - api_contract_tests
+      - database_tests
+      - authentication_tests
+    
+  # Staging Environment (Docker Only)
+  staging:
+    base_url: "http://localhost:3100/api"
+    server_type: "docker"
+    timeout: 60000
+    retries: 5
+    features:
+      - e2e_tests
+      - performance_tests
+      - security_tests
+      - load_tests
+    
+  # Production Environment (Real Application)
+  production:
+    base_url: "https://demo-app.example.com/api"
+    server_type: "real"
+    timeout: 30000
+    retries: 3
+    features:
+      - smoke_tests
+      - critical_path_tests
+      - monitoring_tests
+
+# Test Strategy Matrix
+test_strategies:
+  smoke:
+    environment: "development"
+    duration: "2-5 minutes"
+    coverage: "Critical API endpoints only"
+    reliability: "High (mock server)"
+    
+  integration:
+    environment: "integration"
+    duration: "5-10 minutes"
+    coverage: "API contracts and business logic"
+    reliability: "Medium (Docker with fallback)"
+    
+  e2e:
+    environment: "staging"
+    duration: "10-20 minutes"
+    coverage: "Full API workflows"
+    reliability: "Medium (Docker only)"
+    
+  full:
+    environment: "staging"
+    duration: "20-30 minutes"
+    coverage: "Complete test suite"
+    reliability: "Medium (Docker only)"
+
+# Fallback Strategy
+fallback_strategy:
+  primary: "docker"
+  secondary: "mock_server"
+  tertiary: "skip_tests"
+  
+  conditions:
+    docker_failure: "Container startup timeout > 60s"
+    mock_failure: "Mock server unresponsive"
+    skip_condition: "Both primary and secondary fail"
+
+# Performance Thresholds
+performance_thresholds:
+  smoke_tests:
+    max_duration: "5 minutes"
+    success_rate: "100%"
+    
+  integration_tests:
+    max_duration: "10 minutes"
+    success_rate: "95%"
+    
+  e2e_tests:
+    max_duration: "20 minutes"
+    success_rate: "90%"
+    
+  performance_tests:
+    max_duration: "30 minutes"
+    success_rate: "85%"
