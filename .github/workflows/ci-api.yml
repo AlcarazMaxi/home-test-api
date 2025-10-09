@@ -44,7 +44,7 @@ jobs:
         
     - name: Start demo app container
       run: |
-        docker run -d -p 3100:3100 --name demo-app automaticbytes/demo-app:latest
+        docker run -d -p 3100:3100 --name demo-app --platform linux/amd64 automaticbytes/demo-app:latest
         # Wait for API to be ready
         timeout 30 bash -c 'until curl -f http://localhost:3100/api; do sleep 2; done'
         
