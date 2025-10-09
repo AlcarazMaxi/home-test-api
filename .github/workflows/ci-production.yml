@@ -45,28 +45,46 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
-      - name: Start Docker Container
+      - name: Pre-warm Docker Environment
         run: |
-          # Start the real demo application
-          docker run -d -p 3100:3100 --name demo-app automaticbytes/demo-app:latest
+          # Pre-pull Docker image to avoid download delays
+          echo "Pre-warming Docker environment..."
+          docker pull automaticbytes/demo-app:latest
           
-          # Wait for API to be ready with health check
-          echo "Waiting for demo app API to be ready..."
-          for i in {1..30}; do
-            if curl -f http://localhost:3100/api >/dev/null 2>&1; then
-              echo "Demo app API is ready!"
-              break
-            fi
-            echo "Attempt $i/30: waiting for demo app API..."
-            sleep 2
-          done
+          # Test Docker daemon health
+          docker system info --format '{{.ServerVersion}}'
+          docker system df
           
-          # Final health check
-          curl -f http://localhost:3100/api || {
-            echo "Demo app API failed to start properly"
-            docker logs demo-app
-            exit 1
-          }
+          # Create necessary directories
+          mkdir -p scripts
+
+      - name: Start Docker Container (Multi-Platform)
+        run: |
+          # Set up Docker Buildx for multi-platform support
+          docker buildx create --name multiarch --use || true
+          docker buildx inspect --bootstrap
+          
+          # Create a custom network for better connectivity
+          docker network create test-network || true
+          
+          # Start the real demo application with enhanced configuration
+          echo "Starting demo app with platform compatibility and network isolation..."
+          docker run -d -p 3100:3100 --name demo-app \
+            --platform linux/amd64 \
+            --network test-network \
+            --health-cmd="curl -f http://localhost:3100/api || exit 1" \
+            --health-interval=5s \
+            --health-timeout=3s \
+            --health-retries=3 \
+            --restart=unless-stopped \
+            --add-host=host.docker.internal:host-gateway \
+            -e NODE_ENV=production \
+            -e PORT=3100 \
+            automaticbytes/demo-app:latest
+          
+          # Use enhanced health check script
+          chmod +x scripts/docker-health-check.sh
+          ./scripts/docker-health-check.sh demo-app http://localhost:3100/api 30 2
 
       - name: Run Production API Tests
         run: |
