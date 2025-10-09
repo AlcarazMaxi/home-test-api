@@ -92,9 +92,8 @@ jobs:
   # Stage 2: Integration Tests (Docker with Fallback)
   integration-tests:
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.test_strategy == 'integration' || github.event.inputs.test_strategy == 'full' }}
     needs: smoke-tests
-    if: always() && (needs.smoke-tests.result == 'success' || needs.smoke-tests.result == 'skipped')
+    if: ${{ (github.event.inputs.test_strategy == 'integration' || github.event.inputs.test_strategy == 'full') && always() && (needs.smoke-tests.result == 'success' || needs.smoke-tests.result == 'skipped') }}
     
     steps:
       - name: Checkout code
@@ -189,9 +188,8 @@ jobs:
   # Stage 3: End-to-End Tests (Docker Only)
   e2e-tests:
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.test_strategy == 'e2e' || github.event.inputs.test_strategy == 'full' }}
     needs: [smoke-tests, integration-tests]
-    if: always() && (needs.smoke-tests.result == 'success' || needs.smoke-tests.result == 'skipped') && (needs.integration-tests.result == 'success' || needs.integration-tests.result == 'skipped')
+    if: ${{ (github.event.inputs.test_strategy == 'e2e' || github.event.inputs.test_strategy == 'full') && always() && (needs.smoke-tests.result == 'success' || needs.smoke-tests.result == 'skipped') && (needs.integration-tests.result == 'success' || needs.integration-tests.result == 'skipped') }}
     
     steps:
       - name: Checkout code
@@ -238,9 +236,8 @@ jobs:
   # Stage 4: Performance Tests (Docker + Load Testing)
   performance-tests:
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.test_strategy == 'full' }}
     needs: [smoke-tests, integration-tests, e2e-tests]
-    if: always() && (needs.smoke-tests.result == 'success' || needs.smoke-tests.result == 'skipped') && (needs.integration-tests.result == 'success' || needs.integration-tests.result == 'skipped') && (needs.e2e-tests.result == 'success' || needs.e2e-tests.result == 'skipped')
+    if: ${{ github.event.inputs.test_strategy == 'full' && always() && (needs.smoke-tests.result == 'success' || needs.smoke-tests.result == 'skipped') && (needs.integration-tests.result == 'success' || needs.integration-tests.result == 'skipped') && (needs.e2e-tests.result == 'success' || needs.e2e-tests.result == 'skipped') }}
     
     steps:
       - name: Checkout code
