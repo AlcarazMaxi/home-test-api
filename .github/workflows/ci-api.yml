@@ -5,7 +5,21 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch: # Allow manual triggering
+  workflow_dispatch: # Allow manual triggering with run mode
+    inputs:
+      run_mode:
+        description: 'Test execution mode'
+        required: false
+        default: 'quick'
+        type: choice
+        options:
+          - quick
+          - full
+
+# Cancel in-progress runs to avoid resource conflicts
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   api-tests:
@@ -34,7 +48,12 @@ jobs:
         # Wait for API to be ready
         timeout 30 bash -c 'until curl -f http://localhost:3100/api; do sleep 2; done'
         
-    - name: Run API tests
+    - name: Run API tests (Quick mode)
+      if: ${{ github.event.inputs.run_mode == 'quick' || github.event.inputs.run_mode == '' }}
+      run: mvn test -Dtest=InventoryTestRunner -Dkarate.options="--tags @smoke"
+
+    - name: Run API tests (Full mode)
+      if: ${{ github.event.inputs.run_mode == 'full' }}
       run: mvn test -Dtest=InventoryTestRunner
       
     - name: Upload test results
