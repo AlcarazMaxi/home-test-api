@@ -1,4 +1,4 @@
-# Principal QA Engineer: Production-Ready Dockerfile
+# Senior QA Engineer: Production-Ready Dockerfile
 # Multi-stage build with explicit platform specifications
 # Optimized for CI/CD and production deployment
 
@@ -73,7 +73,7 @@ ENV JAVA_OPTS="-Xmx512m -Xms256m" \
 CMD ["mvn", "test", "-Dtest=InventoryTestRunner"]
 
 # Labels for metadata
-LABEL maintainer="Principal QA Engineer" \
+LABEL maintainer="Senior QA Engineer" \
       version="1.0.0" \
       description="API Tests with Docker Platform Compatibility" \
       platform="linux/amd64" \
